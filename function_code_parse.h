@@ -17,12 +17,14 @@ void reset_communication();
 void initialize();
 void execute_nmt(const uint8_t first_databyte);
 void execute_sync();
-uint8_t parse_function_code(const struct can_frame can_msg);
+uint8_t parse_function_code(struct can_frame can_msg);
 
 #define FUNCTION_CODE_NMT 0
-#define FUNCTION_CODE_SYNC 128
-#define FUNCTION_CODE_SDO_START 1409
-#define FUNCTION_CODE_SDO_END 1663
+#define FUNCTION_CODE_SYNC 0x080
+#define FUNCTION_CODE_PDO_START 0x181
+#define FUNCTION_CODE_PDO_END 0x57F
+#define FUNCTION_CODE_SDO_START 0x581
+#define FUNCTION_CODE_SDO_END 0x67F
 
 #define NODE_ID_NMT_START 0x01
 #define NODE_ID_NMT_STOP 0x02

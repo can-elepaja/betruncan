@@ -1,5 +1,6 @@
 #include "function_code_parse.h"
 #include "sdo_services.h"
+#include "pdo_services.h"
 
 bool state_change_allowed(const uint8_t first_state, const uint8_t second_state) {
   switch(first_state) {
@@ -118,18 +119,28 @@ void execute_sync() {
   return;
 }
 
-uint8_t parse_function_code(const struct can_frame can_msg) {
+uint8_t parse_function_code(struct can_frame can_msg) {
   switch (can_msg.can_id) {
     case(FUNCTION_CODE_SYNC):
-    execute_sync();
-    return 0x01;
+      if ((new_state == STATE_OPERATIONAL) || (new_state == STATE_PREOPERATIONAL)) {
+        execute_sync();
+        return 0x01;
+      }
     case(FUNCTION_CODE_NMT):
-    execute_nmt(can_msg.data[0]);
-    return 0x02;
+      execute_nmt(can_msg.data[0]);
+      return 0x02;
   }
   if ((can_msg.can_id >= FUNCTION_CODE_SDO_START) && (can_msg.can_id <= FUNCTION_CODE_SDO_END)) {
-    parse_sdo_service(can_msg);
-    return 0x03;
+    if ((new_state == STATE_OPERATIONAL) || (new_state == STATE_PREOPERATIONAL)) {
+      //parse_sdo_service(can_msg);
+      return 0x03;
+    }
+  }
+  if ((can_msg.can_id >= FUNCTION_CODE_PDO_START) && (can_msg.can_id <= FUNCTION_CODE_PDO_END)) {
+    if ((new_state == STATE_OPERATIONAL)) {
+      parse_pdo_service(can_msg);
+      return 0x04;
+    }
   }
   return 0x00;
 }

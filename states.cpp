@@ -1,13 +1,16 @@
 #include "states.h"
 #include "function_code_parse.h"
+#include "eeprom.h"
 
 void state_initialising() {
   while (new_state == STATE_INITIALISING) {
     //do initialising shit
-    Serial.begin(9600); //DEBUG
     mcp.reset();
     mcp.setBitrate(CAN_500KBPS, MCP_8MHZ);
     mcp.setNormalMode();
+    //conf_eeprom();
+    pinMode(PIN_ANALOGOUT, OUTPUT);
+    Serial.begin(9600); //DEBUG
     Serial.println(STATE_INITIALISING, HEX); //DEBUG
     new_state = STATE_RESETAPPLICATION;
   }
