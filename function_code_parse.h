@@ -18,6 +18,7 @@ void initialize();
 void execute_nmt(const uint8_t first_databyte);
 void execute_sync();
 uint8_t parse_function_code(struct can_frame can_msg);
+void update_pdo_transmissiontype_statuses();
 
 #define FUNCTION_CODE_NMT 0
 #define FUNCTION_CODE_SYNC 0x080
@@ -38,5 +39,11 @@ uint8_t parse_function_code(struct can_frame can_msg);
 #define STATE_RESETAPPLICATION 0x80
 #define STATE_RESETCOMMUNICATION 0x81
 #define STATE_INITIALISING 0x00
+
+#define PDO_COUNT 2
+#define MULTIPLEXER_ANALOGOUT_TRANSMISSIONTYPE 0x00140102
+#define MULTIPLEXER_ANALOGIN_TRANSMISSIONTYPE 0x00160102
+
+#define MAX_OF_SYNC_LIST 0xF1
 
 #endif 

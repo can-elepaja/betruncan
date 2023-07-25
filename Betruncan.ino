@@ -4,6 +4,8 @@
 struct can_frame can_msg;
 MCP2515 mcp(10);
 uint8_t new_state;
+uint32_t device_id;
+
 
 void setup() {
   new_state = STATE_INITIALISING;

@@ -1,6 +1,11 @@
 #include "function_code_parse.h"
 #include "sdo_services.h"
 #include "pdo_services.h"
+#include "eeprom.h"
+
+struct pdo_transmissiontype_statuses {
+  uint8_t status_array[PDO_COUNT];
+} pdo_transmissiontype_statuses;
 
 bool state_change_allowed(const uint8_t first_state, const uint8_t second_state) {
   switch(first_state) {
@@ -115,7 +120,16 @@ void execute_nmt(const uint8_t first_databyte) {
   return;
 }
 
-void execute_sync() {
+// TBD wtf does this do???
+void update_pdo_transmissiontype_statuses() {
+  pdo_transmissiontype_statuses.status_array[0] = EEPROM_read(MULTIPLEXER_ANALOGOUT_TRANSMISSIONTYPE);
+  pdo_transmissiontype_statuses.status_array[1] = EEPROM_read(MULTIPLEXER_ANALOGIN_TRANSMISSIONTYPE);
+}
+
+void execute_sync(can_frame can_msg) {
+  if (pdo_transmissiontype_statuses.status_array[1] < MAX_OF_SYNC_LIST) {
+    analog_in(can_msg);
+  }
   return;
 }
 
@@ -123,7 +137,7 @@ uint8_t parse_function_code(struct can_frame can_msg) {
   switch (can_msg.can_id) {
     case(FUNCTION_CODE_SYNC):
       if ((new_state == STATE_OPERATIONAL) || (new_state == STATE_PREOPERATIONAL)) {
-        execute_sync();
+        execute_sync(can_msg);
         return 0x01;
       }
     case(FUNCTION_CODE_NMT):

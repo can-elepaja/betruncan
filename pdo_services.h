@@ -9,11 +9,16 @@
 
 extern MCP2515 mcp;
 extern struct can_frame can_msg;
+extern uint32_t device_id;
 
 void parse_pdo_service(struct can_frame can_msg);
-void pdo_service_two(const struct can_frame can_msg);
-void pdo_service_one(const struct can_frame can_msg);
+void analog_in(const struct can_frame can_msg);
+void analog_out(const struct can_frame can_msg);
+void pdo_start(struct can_frame can_msg);
+void pdo_exit(struct can_frame can_msg);
 
+// TBD are these needed?
+/*
 #define FUNCTION_CODE_PDO_ONETX_START 0x181
 #define FUNCTION_CODE_PDO_ONETX_END 0x1FF
 #define FUNCTION_CODE_PDO_ONERX_START 0x201
@@ -33,6 +38,15 @@ void pdo_service_one(const struct can_frame can_msg);
 #define FUNCTION_CODE_PDO_FOURTX_END 0x4FF
 #define FUNCTION_CODE_PDO_FOURRX_START 0x501
 #define FUNCTION_CODE_PDO_FOURRX_END 0x57F
+*/
 
+#define MULTIPLEXER_ERRORREGISTER 0x00100100
+#define MULTIPLEXER_ANALOGINPUT 0x00640101
+#define MULTIPLEXER_ANALOGOUTPUT 0x00641101
+#define MULTIPLEXER_TPDO 0x00180101
+
+#define MASK_AO_COBID 0x0300
+#define MASK_AI_COBID 0x0280
+#define MASK_COBID 0x0000
 
 #endif

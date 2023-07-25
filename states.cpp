@@ -1,71 +1,60 @@
 #include "states.h"
 #include "function_code_parse.h"
 #include "eeprom.h"
+#include "pdo_services.h"
+
+void read_canbus() {
+  MCP2515::ERROR err;
+  err = mcp.readMessage(&can_msg);
+  if (err == MCP2515::ERROR_OK) {
+    parse_function_code(can_msg);
+  }
+}
 
 void state_initialising() {
   while (new_state == STATE_INITIALISING) {
-    //do initialising shit
     mcp.reset();
     mcp.setBitrate(CAN_500KBPS, MCP_8MHZ);
     mcp.setNormalMode();
-    //conf_eeprom();
+    conf_eeprom();
     pinMode(PIN_ANALOGOUT, OUTPUT);
     Serial.begin(9600); //DEBUG
-    Serial.println(STATE_INITIALISING, HEX); //DEBUG
     new_state = STATE_RESETAPPLICATION;
   }
 }
 
 void state_resetapplication() {
   while (new_state == STATE_RESETAPPLICATION) {
-    //Reset the application
-    Serial.println(STATE_RESETAPPLICATION, HEX); //DEBUG
     new_state = STATE_RESETCOMMUNICATION;
   }
 }
 
 void state_resetcommunication() {
   while (new_state == STATE_RESETCOMMUNICATION) {
-    //Reset the communication
-    Serial.println(STATE_RESETCOMMUNICATION, HEX); //DEBUG
+    device_id = DEFAULT_CANID;
     new_state = STATE_PREOPERATIONAL;
   }
 }
 
 void state_preoperational() {
   while (new_state == STATE_PREOPERATIONAL) {
-    //Be in preoperational state
-    Serial.println(STATE_PREOPERATIONAL, HEX); //DEBUG
-    MCP2515::ERROR err;
-    err = mcp.readMessage(&can_msg);
-    if (err == MCP2515::ERROR_OK) {
-      parse_function_code(can_msg);
-    }
+    read_canbus();
   }
 }
 
 void state_stopped() {
   while (new_state == STATE_STOPPED) {
-    //Be in stopped state
-    Serial.println(STATE_STOPPED, HEX);
-    MCP2515::ERROR err;
-    err = mcp.readMessage(&can_msg);
-    if (err == MCP2515::ERROR_OK) {
-      parse_function_code(can_msg);
-    }
+    read_canbus();
   }
 }
 
 void state_operational() {
+  update_pdo_transmissiontype_statuses();
+  pdo_start(can_msg);
   while (new_state == STATE_OPERATIONAL) {
-    //Do operational shit
-    Serial.println(STATE_OPERATIONAL, HEX);
-    MCP2515::ERROR err;
-    err = mcp.readMessage(&can_msg);
-    if (err == MCP2515::ERROR_OK) {
-      parse_function_code(can_msg);
-    }
+    read_canbus();
   }
+  pdo_exit(can_msg);
 }
 
 

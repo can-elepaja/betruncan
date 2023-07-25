@@ -18,54 +18,60 @@ block rpdo_mapping_parameters =      { .addr = 0x008A, .subs = 9 }; //content: N
 block tpdo_communication_parameters ={ .addr = 0x00AE, .subs = 9 }; //content: Highest_subindex_supported(u8), COB-ID_used_by_TPDO(u32), Transmission_type(u8), Inhibit_timer(u16), Event_timer(16), SYNC_start_value(u8)
 block tpdo_mapping_parameters =      { .addr = 0x00D2, .subs = 9 }; //content: Number_of_application_objects_in_PDO(u8), Application_objects(1-8)(8 x u32)
 block identity =                     { .addr = 0x00F6, .subs = 9 }; //content: Highest sub index(u8), Vendor-ID(u32), Product-code(u32), Revision-number(u32), Serial-number(u32)
+block failure =                      { .addr = 0xFFFF, .subs = 0 }; //"Something is wrong"
 
-block multiplexer_to_block(const uint8_t mplx[]) {
-  if ((mplx[0] == 0x10) && (mplx[1] == 0x00)) {
+
+block multiplexer_to_block(const uint32_t multiplexer) {
+  const uint16_t address = multiplexer;
+  const uint16_t node_id = (device_id & MASK_NODEID);
+  if (address == 0x1000) {
     return device_type;
   }
-  else if ((mplx[0] == 0x10) && (mplx[1] == 0x01)) {
+  else if (address == 0x1001) {
     return error_register;
   }
-  else if ((mplx[0] == 0x10) && (mplx[1] == 0x18)) {
-    return identity;
-  }
-  else if ((mplx[0] == 0x10) && (mplx[1] == 0x05)) {
+  else if (address == 0x1005) {
     return cob_id_sync_message;
   }
-  else if ((mplx[0] == 0x10) && (mplx[1] == 0x06)) {
+  else if (address == 0x1006) {
     return communication_cycle_perioid;
   }
-  else if ((mplx[0] == 0x10) && (mplx[1] == 0x17)) {
+  else if (address == 0x1017) {
     return producer_heartbeat_time;
   }
-  else if ((mplx[0] == 0x12) && (mplx[1] == 0x00)) {
+  else if (address == 0x1018) {
+    return identity;
+  }
+  else if (address == 0x1200 + node_id) {
     return sdo_server_parameters;
   }
-  else if ((mplx[0] == 0x12) && (mplx[1] == 0x80)) {
+  else if (address == 0x1280 + node_id) {
     return sdo_client_parameters;
   }
-  else if ((mplx[0] == 0x14) && (mplx[1] == 0x00)) {
+  else if (address == 0x1401) {
     return rpdo_communication_parameters;
   }
-  else if ((mplx[0] == 0x16) && (mplx[1] == 0x00)) {
+  else if (address == 0x1601) {
     return rpdo_mapping_parameters;
   }
-  else if ((mplx[0] == 0x18) && (mplx[1] == 0x00)) {
+  else if (address == 0x1801) {
     return tpdo_communication_parameters;
   }
-  else if ((mplx[0] == 0x1A) && (mplx[1] == 0x00)) {
+  else if (address == 0x1A01) {
     return tpdo_mapping_parameters;
+  }
+  else {
+    return failure;
   }
 }
 
 
-/*
 void conf_eeprom() {
-  EEPROM_write({0x14, 0x00, 0x00}, {0x00, 0x00, 0x00, 0x02});
-  EEPROM_write({0x14, 0x00, 0x01}, {0x00, 0x00, 0x02, 0x01});
-  EEPROM_write({0x14, 0x00, 0x02}, {0x00, 0x00, 0x00, 0x00});
+  EEPROM_write(0x1000, DEFAULT_DEVICETYPE);
+  EEPROM_write(0x1401, DEFAULT_TPDO_HIGHEST_SUBINDEX);
+  EEPROM_write(0x1801, DEFAULT_RPDO_HIGHEST_SUBINDEX);
+  EEPROM_write(0x1001, DEFAULT_ERROR_REGISTER);
 }
-*/
 
 
 bool EEPROM_status() {
@@ -99,11 +105,14 @@ void EEPROM_write_byte(const uint16_t addr, const uint8_t data) {
 }
 
 
-void EEPROM_write(const uint8_t multiplexer[], const uint8_t data[]) {
+void EEPROM_write(const uint32_t multiplexer, const uint32_t data) {
   const struct block ablock = multiplexer_to_block(multiplexer);
-  uint16_t subindex = (0x00 << 8) + (4*multiplexer[2]);
-  for (byte i = 0; i<4; i++){
-    EEPROM_write_byte(ablock.addr + subindex + i, data[i]);
+  if (ablock.subs == 0) {
+    return;
+  }
+  uint16_t subindex = 4*(multiplexer >> 16);
+  for (uint8_t i = 0; i<4; i++){
+    EEPROM_write_byte(ablock.addr + subindex + i, data >> (8*i));
     while (!EEPROM_status());
   }
   digitalWrite(EEPROM_CS, LOW);
@@ -112,8 +121,8 @@ void EEPROM_write(const uint8_t multiplexer[], const uint8_t data[]) {
 }
 
 
-
-uint8_t EEPROM_read_byte(const byte addr) {
+//DONT CALL THIS FUNCTION!!! USE EERPOM_read INSTEAD!!!
+uint8_t EEPROM_read_byte(const uint16_t addr) {
   digitalWrite(EEPROM_CS, LOW);
   SPI.transfer(INS_EEPROM_READ);
   SPI.transfer16(addr);
@@ -123,19 +132,17 @@ uint8_t EEPROM_read_byte(const byte addr) {
 }
 
 
-
-uint8_t *EEPROM_read(const struct block ablock) {
-  byte *data_pnt = malloc(4*ablock.subs);
-  for (byte i = 0; i<(4*ablock.subs); i++){
-    *(data_pnt + i) = EEPROM_read_byte(ablock.addr + i);
+uint32_t EEPROM_read(const uint32_t multiplexer) {
+  const struct block ablock = multiplexer_to_block(multiplexer);
+  if (ablock.subs == 0) {
+    return;
   }
-  return (data_pnt);
-}
-
-/*
-void TEST_write2serial(const struct block ablock, const byte *pointer) {
-  for (byte i=0; i<ablock.byte_len; i++) {
-    Serial.println(*(pointer + i));
+  uint32_t data;
+  uint32_t bitshifter;
+  uint16_t subindex = 4*(multiplexer >> 16);
+  for (uint8_t i = 0; i<4; i++){
+    bitshifter = EEPROM_read_byte(ablock.addr + subindex + i);
+    data += (bitshifter << (8*i));
   }
+  return data;
 }
-*/
