@@ -18,7 +18,7 @@ void analog_in(struct can_frame can_msg) {
   //EEPROM_write(MULTIPLEXER_ANALOGINPUT, value); TBD check if even needed
   uint16_t tpdo_canid = (0x7FF & EEPROM_read(MULTIPLEXER_TPDO));
   for (uint8_t i=0; i<8; i++) {
-    can_msg.data[i] = 0x00; 
+    can_msg.data[i] = 0x00;
   }
   can_msg.data[0] = value;
   can_msg.data[1] = (value >> 8);
